@@ -1,6 +1,5 @@
-# Assistant/internal config -- never committed to this public repo.
-# See strategy-oss-all-implementation-plan/releaseguard/ in the private
-# oss-ideas-execution-strategy repo for the canonical copies.
+# Local-only project notes and assistant config -- never committed to this
+# public repo, and never named here beyond the local filenames themselves.
 CLAUDE.md
 TODOS.md
 BRANCH_PROTECTION.md

@@ -14,7 +14,7 @@ set -euo pipefail
 
 cd "$(git rev-parse --show-toplevel)"
 
-PATTERN='CEO review|office.?hours|eng.?review|devex review|CSO review|CSO threat.?model|/oss-[0-9]+-[a-z-]+|/plan-eng-review|/review finding|Reviewer Concern|viability score|WOUNDED|fundrais|investor.?outreach|Show HN draft|hype.?seed'
+PATTERN='CEO review|office.?hours|eng.?review|devex review|CSO review|CSO threat.?model|/oss-[0-9]+-[a-z-]+|/plan-eng-review|/review finding|Reviewer Concern|viability score|WOUNDED|fundrais|investor.?outreach|Show HN draft|hype.?seed|oss-ideas-execution-strategy|strategy-oss-all-implementation-plan|execution-plan-20[0-9]{2}-|the private (strategy )?repo|canonical copies'
 ZERO_SHA="0000000000000000000000000000000000000000"
 # The fixed, well-known hash of git's empty tree object -- exists in every
 # repo without needing to be created. Used as the diff base for a brand-new

@@ -30,7 +30,7 @@ jobs:
       - name: Fail on internal-process language in tracked files
         run: |
           set -e
-          pattern='CEO review|office.?hours|eng.?review|devex review|CSO review|CSO threat.?model|/oss-[0-9]+-[a-z-]+|/plan-eng-review|/review finding|Reviewer Concern|viability score|WOUNDED|fundrais|investor.?outreach|Show HN draft|hype.?seed'
+          pattern='CEO review|office.?hours|eng.?review|devex review|CSO review|CSO threat.?model|/oss-[0-9]+-[a-z-]+|/plan-eng-review|/review finding|Reviewer Concern|viability score|WOUNDED|fundrais|investor.?outreach|Show HN draft|hype.?seed|oss-ideas-execution-strategy|strategy-oss-all-implementation-plan|execution-plan-20[0-9]{2}-|the private (strategy )?repo|canonical copies'
           hits=$(git grep -InE "$pattern" -- . ':!.github/workflows/no-internal-docs.yml' ':!scripts/check-no-internal-docs.sh' || true)
           if [ -n "$hits" ]; then
             echo "Internal-process language found in tracked files:"
