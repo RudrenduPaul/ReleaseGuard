@@ -18,6 +18,11 @@ class JsonReader(FileReader):
         return path.lower().endswith(JSON_EXTENSIONS)
 
     def read_fragments(self, path: str) -> Iterator[TextFragment]:
+        # A malformed line/file or adversarially deep nesting (Python's
+        # default recursion limit is a real, reachable ceiling, not a
+        # purely theoretical one) is skipped rather than left to crash
+        # the whole scan -- see `redactor.py`'s `_redact_json_file` for
+        # why redaction must mirror this same handling exactly.
         is_lines = path.lower().endswith((".jsonl", ".ndjson"))
         with open(path, encoding="utf-8", errors="replace") as f:
             if is_lines:
@@ -27,15 +32,15 @@ class JsonReader(FileReader):
                         continue
                     try:
                         record = json.loads(line)
-                    except json.JSONDecodeError:
+                        yield from self._walk(record, line_number, "")
+                    except (json.JSONDecodeError, RecursionError):
                         continue
-                    yield from self._walk(record, line_number, "")
             else:
                 try:
                     record = json.load(f)
-                except json.JSONDecodeError:
+                    yield from self._walk(record, None, "")
+                except (json.JSONDecodeError, RecursionError):
                     return
-                yield from self._walk(record, None, "")
 
     def _walk(self, value: Any, line_number: int | None, path: str) -> Iterator[TextFragment]:
         if isinstance(value, str):

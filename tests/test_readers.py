@@ -66,3 +66,17 @@ def test_json_reader_yields_nothing_for_malformed_single_json_file(tmp_path):
     path = tmp_path / "data.json"
     path.write_text("{not valid json")
     assert list(JsonReader().read_fragments(str(path))) == []
+
+
+def test_json_reader_does_not_crash_on_adversarially_deep_nesting(tmp_path):
+    """Regression test: `json.loads` itself parses very deep nesting fine
+    (its C-accelerated decoder isn't bound by Python's recursion limit),
+    but this reader's own `_walk` traversal is a plain recursive Python
+    function and previously had no depth guard -- a 2,000-level-deep JSON
+    array (trivial to construct, e.g. from a malformed or adversarial
+    dataset file) raised an uncaught `RecursionError` and crashed the
+    entire scan. It must now be skipped like any other unparseable file.
+    """
+    path = tmp_path / "deep.json"
+    path.write_text("[" * 2000 + '"leaf"' + "]" * 2000)
+    assert list(JsonReader().read_fragments(str(path))) == []

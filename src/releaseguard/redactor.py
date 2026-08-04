@@ -118,22 +118,45 @@ def _redact_json_value(
 def _redact_json_file(
     source_path: str, dest_path: str, file_findings: list[Finding], strategy: RedactionStrategy
 ) -> None:
+    """Redact a .json/.jsonl/.ndjson file.
+
+    Mirrors `JsonReader.read_fragments`'s error handling exactly: a line
+    (jsonl) or the whole file (json) that fails to parse produces no
+    findings during scanning, so `file_findings` for it is already empty.
+    Redaction must not treat that same failure differently -- an earlier
+    version called `json.loads`/`json.load` here with no error handling,
+    so a directory that `scan` completed successfully against (silently
+    skipping the malformed content) would crash `redact`/`package`
+    outright on the exact same input. A malformed line/file is written
+    through unchanged instead, consistent with the "no reader claims this
+    format -> copy through" policy in `redact_directory` below, and with
+    `RecursionError` from adversarially deep nesting handled the same way
+    (Python's default recursion limit is a real, reachable ceiling here,
+    not a purely theoretical one).
+    """
     is_lines = source_path.lower().endswith((".jsonl", ".ndjson"))
     with open(source_path, encoding="utf-8", errors="replace") as src:
         if is_lines:
             out_lines = []
-            for line_number, line in enumerate(src, start=1):
-                line = line.strip()
+            for line_number, raw_line in enumerate(src, start=1):
+                line = raw_line.strip()
                 if not line:
                     continue
-                record = json.loads(line)
-                redacted = _redact_json_value(record, line_number, "", file_findings, strategy)
-                out_lines.append(json.dumps(redacted))
+                try:
+                    record = json.loads(line)
+                    redacted = _redact_json_value(record, line_number, "", file_findings, strategy)
+                    out_lines.append(json.dumps(redacted))
+                except (json.JSONDecodeError, RecursionError):
+                    out_lines.append(line)
             content = "\n".join(out_lines) + "\n"
         else:
-            record = json.load(src)
-            redacted = _redact_json_value(record, None, "", file_findings, strategy)
-            content = json.dumps(redacted, indent=2) + "\n"
+            raw_content = src.read()
+            try:
+                record = json.loads(raw_content)
+                redacted = _redact_json_value(record, None, "", file_findings, strategy)
+                content = json.dumps(redacted, indent=2) + "\n"
+            except (json.JSONDecodeError, RecursionError):
+                content = raw_content
 
     with open(dest_path, "w", encoding="utf-8") as dst:
         dst.write(content)

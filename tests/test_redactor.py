@@ -117,6 +117,48 @@ def test_redact_directory_jsonl_redacts_each_record_independently(tmp_path):
     assert json.loads(lines[1])["text"] == "no pii here"
 
 
+def test_redact_directory_does_not_crash_on_malformed_json_that_scan_already_skipped(tmp_path):
+    """Regression test: `scan` silently skips a malformed JSON file (0
+    findings for it), but an earlier version of `redact_directory` called
+    `json.load` on it with no error handling, so redacting the exact same
+    directory `scan` had just succeeded against raised an unhandled
+    `JSONDecodeError` and aborted the whole run. The file must now be
+    written through unchanged instead, consistent with `scan`'s own
+    handling of the same input.
+    """
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "broken.json").write_text("{not valid json")
+    (source / "notes.txt").write_text("john@example.com\n")
+
+    scan_result = scan_directory(str(source), StubDetector())
+    assert (
+        scan_result.files_scanned == 2
+    )  # both files are "readable" by format, one just fails to parse
+
+    output = tmp_path / "out"
+    result = redact_directory(scan_result, str(output))  # must not raise
+
+    assert (output / "broken.json").read_text() == "{not valid json"
+    assert (output / "notes.txt").read_text() != "john@example.com\n"  # actually redacted
+    assert result.entities_redacted["EMAIL_ADDRESS"] == 1
+
+
+def test_redact_directory_does_not_crash_on_malformed_jsonl_line(tmp_path):
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "data.jsonl").write_text('{"text": "john@example.com"}\nnot json at all\n')
+
+    scan_result = scan_directory(str(source), StubDetector())
+    output = tmp_path / "out"
+    result = redact_directory(scan_result, str(output), strategy=RedactionStrategy.REMOVE)
+
+    lines = (output / "data.jsonl").read_text().splitlines()
+    assert json.loads(lines[0])["text"] == ""
+    assert lines[1] == "not json at all"
+    assert result.entities_redacted["EMAIL_ADDRESS"] == 1
+
+
 def test_redact_directory_copies_unreadable_formats_through_unchanged(tmp_path):
     source = tmp_path / "source"
     source.mkdir()
