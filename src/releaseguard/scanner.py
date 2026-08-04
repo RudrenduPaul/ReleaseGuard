@@ -22,14 +22,35 @@ SKIP_DIR_NAMES = {
 }
 
 
-def iter_files(root: str) -> list[str]:
-    """Recursively list every file under `root`, skipping VCS/dependency dirs."""
+def iter_files(root: str) -> tuple[list[str], list[str]]:
+    """Recursively list every file under `root`, skipping VCS/dependency dirs.
+
+    Returns `(files, skipped_symlinks)`. `os.walk`'s default
+    `followlinks=False` stops it descending *into* a symlinked directory,
+    but a symlink to a *file* is still yielded in `filenames` -- its
+    `is_dir()` check follows the link and returns False, so it lands
+    alongside real files with no signal that it's a link. Left unfiltered,
+    a dataset directory containing a symlink to an unrelated host file
+    (`checkpoint.bin -> /etc/some-secret`) would have that file's real,
+    unredacted content copied straight into a "redacted, safe for public
+    release" output bundle by `redactor.py` -- confirmed via an independent
+    security review during this project's build, not a theoretical
+    concern. Every symlinked file is excluded here, at the single shared
+    listing function both `scan_directory` and `redact_directory` call, so
+    neither path can be reached through the other by accident. See
+    SECURITY.md's scope note.
+    """
     matched: list[str] = []
+    skipped_symlinks: list[str] = []
     for dirpath, dirnames, filenames in os.walk(root):
         dirnames[:] = [d for d in dirnames if d not in SKIP_DIR_NAMES]
         for filename in filenames:
-            matched.append(os.path.join(dirpath, filename))
-    return sorted(matched)
+            full_path = os.path.join(dirpath, filename)
+            if os.path.islink(full_path):
+                skipped_symlinks.append(full_path)
+            else:
+                matched.append(full_path)
+    return sorted(matched), sorted(skipped_symlinks)
 
 
 def scan_directory(
@@ -41,16 +62,32 @@ def scan_directory(
     """Scan every readable file under `root_path` and return every finding.
 
     A single file (not a directory) is also accepted -- `root_path` is
-    treated as a one-file directory in that case.
+    treated as a one-file directory in that case. A symlinked `root_path`
+    (file or directory) is refused outright and reported as fully skipped,
+    the same safety rule `iter_files` applies to every symlink found
+    during a directory walk -- see its docstring.
     """
+    files_skipped: list[str] = []
+
+    if os.path.islink(root_path):
+        return ScanResult(
+            root_path=root_path,
+            files_scanned=0,
+            files_skipped=[root_path],
+            findings=[],
+            entity_counts={},
+            detector_name=getattr(detector, "name", "unknown"),
+            language=language,
+        )
+
     if os.path.isfile(root_path):
         candidate_paths = [root_path]
     else:
-        candidate_paths = iter_files(root_path)
+        candidate_paths, skipped_symlinks = iter_files(root_path)
+        files_skipped.extend(skipped_symlinks)
 
     findings: list[Finding] = []
     files_scanned = 0
-    files_skipped: list[str] = []
 
     for path in candidate_paths:
         reader = get_reader_for(path, readers)

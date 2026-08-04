@@ -20,6 +20,7 @@ from presidio_anonymizer import AnonymizerEngine
 from presidio_anonymizer.entities import OperatorConfig, RecognizerResult
 
 from releaseguard.readers import FileReader, get_reader_for
+from releaseguard.readers.base import unique_field_names
 from releaseguard.scanner import default_readers, iter_files
 from releaseguard.types import Finding, RedactionResult, RedactionStrategy, ScanResult
 
@@ -74,19 +75,27 @@ def _redact_text_file(
 def _redact_csv_file(
     source_path: str, dest_path: str, file_findings: list[Finding], strategy: RedactionStrategy
 ) -> None:
+    # Positional (`csv.reader`/`csv.writer`), not `DictReader`/`DictWriter`
+    # -- see `unique_field_names`'s docstring for why: a dict-keyed
+    # approach collapses duplicate column names and silently drops or
+    # duplicates data across them.
     with open(source_path, newline="", encoding="utf-8", errors="replace") as src:
-        reader = csv.DictReader(src)
-        fieldnames = reader.fieldnames or []
+        reader = csv.reader(src)
+        try:
+            header = next(reader)
+        except StopIteration:
+            header = []
+        field_names = unique_field_names(header)
         rows = list(reader)
 
     with open(dest_path, "w", newline="", encoding="utf-8") as dst:
-        writer = csv.DictWriter(dst, fieldnames=fieldnames)
-        writer.writeheader()
+        writer = csv.writer(dst)
+        writer.writerow(header)
         for row_number, row in enumerate(rows, start=2):
-            redacted_row = {}
-            for field_name, value in row.items():
+            redacted_row = []
+            for field_name, value in zip(field_names, row, strict=False):
                 fragment_findings = _findings_for_fragment(file_findings, row_number, field_name)
-                redacted_row[field_name] = _anonymize_text(value or "", fragment_findings, strategy)
+                redacted_row.append(_anonymize_text(value or "", fragment_findings, strategy))
             writer.writerow(redacted_row)
 
 
@@ -177,6 +186,12 @@ def redact_directory(
     overwrite: bool = False,
 ) -> RedactionResult:
     """Write a redacted copy of `scan_result.root_path` to `output_root`."""
+    if os.path.exists(output_root) and not os.path.isdir(output_root):
+        # --output pointed at an existing regular file, not a directory.
+        # `os.listdir` below would raise a raw NotADirectoryError for this
+        # case if it weren't caught here first -- fail with the same clear,
+        # catchable FileExistsError instead of an uncaught traceback.
+        raise FileExistsError(f"{output_root!r} already exists and is not a directory.")
     if os.path.exists(output_root) and os.listdir(output_root) and not overwrite:
         raise FileExistsError(
             f"{output_root!r} already exists and is not empty. "
@@ -191,13 +206,26 @@ def redact_directory(
     for finding in scan_result.findings:
         findings_by_file[finding.file_path].append(finding)
 
+    files_written: list[str] = []
+    entities_redacted: dict[str, int] = defaultdict(int)
+
+    # A symlinked root is refused outright, same as `scan_directory` --
+    # neither reading through it nor copying it into "redacted, safe for
+    # public release" output is safe. See `scanner.iter_files`'s docstring
+    # for the concrete exploit this guards against.
+    if os.path.islink(root):
+        return RedactionResult(
+            source_root=root,
+            output_root=output_root,
+            strategy=strategy.value,
+            files_written=[],
+            entities_redacted={},
+        )
+
     if os.path.isfile(root):
         candidate_paths = [root]
     else:
-        candidate_paths = iter_files(root)
-
-    files_written: list[str] = []
-    entities_redacted: dict[str, int] = defaultdict(int)
+        candidate_paths, _skipped_symlinks = iter_files(root)
 
     for source_path in candidate_paths:
         rel = (

@@ -1,4 +1,5 @@
 from releaseguard.readers import DEFAULT_READERS, get_reader_for
+from releaseguard.readers.base import unique_field_names
 from releaseguard.readers.csv_reader import CsvReader
 from releaseguard.readers.json_reader import JsonReader
 from releaseguard.readers.text_reader import TextReader
@@ -66,6 +67,24 @@ def test_json_reader_yields_nothing_for_malformed_single_json_file(tmp_path):
     path = tmp_path / "data.json"
     path.write_text("{not valid json")
     assert list(JsonReader().read_fragments(str(path))) == []
+
+
+def test_unique_field_names_is_a_no_op_for_non_duplicate_headers():
+    assert unique_field_names(["name", "email"]) == ["name", "email"]
+
+
+def test_unique_field_names_disambiguates_duplicates():
+    assert unique_field_names(["email", "note", "email"]) == ["email[1]", "note", "email[2]"]
+
+
+def test_csv_reader_keeps_both_columns_of_a_duplicate_header(tmp_path):
+    path = tmp_path / "data.csv"
+    path.write_text("email,note,email\njohn@example.com,hi,jane@example.com\n")
+    fragments = list(CsvReader().read_fragments(str(path)))
+    by_field = {f.field_name: f.text for f in fragments}
+    assert by_field["email[1]"] == "john@example.com"
+    assert by_field["email[2]"] == "jane@example.com"
+    assert by_field["note"] == "hi"
 
 
 def test_json_reader_does_not_crash_on_adversarially_deep_nesting(tmp_path):

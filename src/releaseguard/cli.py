@@ -97,6 +97,11 @@ def scan(
 )
 @click.option("--spacy-model", default=None)
 @click.option("--score-threshold", default=0.35, show_default=True, type=float)
+@click.option(
+    "--entities",
+    default=None,
+    help="Comma-separated list of entity types to scan for (default: all Presidio recognizers).",
+)
 @click.option("--json", "as_json", is_flag=True)
 def redact(
     path: str,
@@ -105,6 +110,7 @@ def redact(
     overwrite: bool,
     spacy_model: str | None,
     score_threshold: float,
+    entities: str | None,
     as_json: bool,
 ) -> None:
     """Scan PATH and write a redacted copy to --output. Never mutates PATH."""
@@ -112,7 +118,10 @@ def redact(
     from releaseguard.redactor import redact_directory
     from releaseguard.scanner import scan_directory
 
-    detector = get_detector("presidio", spacy_model=spacy_model, score_threshold=score_threshold)
+    entity_list = [e.strip() for e in entities.split(",")] if entities else None
+    detector = get_detector(
+        "presidio", spacy_model=spacy_model, score_threshold=score_threshold, entities=entity_list
+    )
     scan_result = scan_directory(path, detector)
     try:
         result = redact_directory(
@@ -164,6 +173,11 @@ def redact(
 )
 @click.option("--spacy-model", default=None)
 @click.option("--score-threshold", default=0.35, show_default=True, type=float)
+@click.option(
+    "--entities",
+    default=None,
+    help="Comma-separated list of entity types to scan for (default: all Presidio recognizers).",
+)
 @click.option("--json", "as_json", is_flag=True)
 def package_cmd(
     path: str,
@@ -173,6 +187,7 @@ def package_cmd(
     strategy: str,
     spacy_model: str | None,
     score_threshold: float,
+    entities: str | None,
     as_json: bool,
 ) -> None:
     """Scan PATH, optionally redact it, and generate a release bundle in --output.
@@ -186,7 +201,10 @@ def package_cmd(
     from releaseguard.redactor import redact_directory
     from releaseguard.scanner import scan_directory
 
-    detector = get_detector("presidio", spacy_model=spacy_model, score_threshold=score_threshold)
+    entity_list = [e.strip() for e in entities.split(",")] if entities else None
+    detector = get_detector(
+        "presidio", spacy_model=spacy_model, score_threshold=score_threshold, entities=entity_list
+    )
     scan_result = scan_directory(path, detector)
 
     redaction_result = None

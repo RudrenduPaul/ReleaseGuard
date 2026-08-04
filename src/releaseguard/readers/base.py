@@ -22,6 +22,36 @@ class TextFragment:
     field_name: str | None = None
 
 
+def unique_field_names(header: list[str]) -> list[str]:
+    """Disambiguate a CSV header row so duplicate column names never collide.
+
+    `csv.DictReader`/`DictWriter` silently collapse duplicate header names
+    into one dict key, keeping only the last column's value -- a CSV with
+    header `email,note,email` reads the *first* `email` column's value as
+    unreachable (never scanned) and, on write-back, duplicates the
+    *second* column's redacted value into both `email` slots. Confirmed
+    during an independent security review. This function is used by both
+    `CsvReader` (read) and `redactor.py`'s CSV writer (write-back) so the
+    same field name always identifies the same physical column on both
+    sides -- true duplicates get an explicit `[index]` suffix
+    (`email[1]`, `email[2]`); a header that appears only once is returned
+    unchanged, so this is a no-op for the common case.
+    """
+    counts: dict[str, int] = {}
+    for name in header:
+        counts[name] = counts.get(name, 0) + 1
+
+    seen: dict[str, int] = {}
+    result: list[str] = []
+    for name in header:
+        if counts[name] > 1:
+            seen[name] = seen.get(name, 0) + 1
+            result.append(f"{name}[{seen[name]}]")
+        else:
+            result.append(name)
+    return result
+
+
 class FileReader(ABC):
     """A format-specific reader that yields scannable text fragments."""
 

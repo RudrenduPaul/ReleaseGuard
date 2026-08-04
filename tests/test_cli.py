@@ -41,6 +41,28 @@ def test_redact_writes_output_dir(sample_dir, tmp_path):
     assert (output / "notes.txt").exists()
 
 
+def test_redact_accepts_entities_filter(sample_dir, tmp_path):
+    output = tmp_path / "redacted"
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "redact",
+            str(sample_dir),
+            "--output",
+            str(output),
+            "--json",
+            "--score-threshold",
+            "0.1",
+            "--entities",
+            "EMAIL_ADDRESS",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert set(payload["entities_redacted"].keys()) <= {"EMAIL_ADDRESS"}
+
+
 def test_redact_refuses_nonempty_output_without_overwrite(sample_dir, tmp_path):
     output = tmp_path / "redacted"
     output.mkdir()
@@ -70,6 +92,28 @@ def test_package_writes_bundle(sample_dir, tmp_path):
     payload = json.loads(result.output)
     assert payload["dataset_card_path"] is not None
     assert (output / "eu-ai-act-training-summary.md").exists()
+
+
+def test_package_accepts_entities_filter(sample_dir, tmp_path):
+    output = tmp_path / "bundle"
+    runner = CliRunner()
+    result = runner.invoke(
+        main,
+        [
+            "package",
+            str(sample_dir),
+            "--output",
+            str(output),
+            "--json",
+            "--score-threshold",
+            "0.1",
+            "--entities",
+            "EMAIL_ADDRESS",
+        ],
+    )
+    assert result.exit_code == 0, result.output
+    payload = json.loads(result.output)
+    assert set(payload["scan"]["entity_counts"].keys()) <= {"EMAIL_ADDRESS"}
 
 
 def test_mcp_command_without_extra_fails_clearly(monkeypatch, sample_dir):

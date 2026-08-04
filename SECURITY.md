@@ -34,6 +34,15 @@ argument and read/write within it. A vulnerability report involving path
 traversal, symlink handling, or output-directory overwrite behavior is in
 scope.
 
+**Symlinks are never followed.** Every symlinked file, wherever it appears
+inside a scanned directory (or as the scan target itself), is excluded from
+scanning and redaction and is never copied into a release bundle -- see
+`scanner.iter_files`'s docstring for the exploit this closes (an
+independent security review during this project's build found that an
+earlier version copied a symlink's real target content, unredacted,
+straight into "safe for public release" output). A symlink shows up in
+`--json` output under `files_skipped`, never silently.
+
 **Not in scope:** Presidio's own detection accuracy or recognizer logic.
 File a report with [Presidio](https://github.com/data-privacy-stack/presidio)
 directly for anything about what it does or doesn't detect; ReleaseGuard

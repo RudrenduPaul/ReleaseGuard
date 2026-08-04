@@ -1,3 +1,4 @@
+import csv
 import json
 
 import pytest
@@ -157,6 +158,85 @@ def test_redact_directory_does_not_crash_on_malformed_jsonl_line(tmp_path):
     assert json.loads(lines[0])["text"] == ""
     assert lines[1] == "not json at all"
     assert result.entities_redacted["EMAIL_ADDRESS"] == 1
+
+
+def test_redact_directory_never_copies_a_symlinked_file_into_output(tmp_path):
+    """Regression test for the core security finding: a symlink inside the
+    scanned directory pointing at an unrelated host file was previously
+    followed by `shutil.copy2`/`open()` and its real, unredacted content
+    landed verbatim in the "redacted, safe for public release" output.
+    """
+    source = tmp_path / "source"
+    source.mkdir()
+    outside_secret = tmp_path / "outside-secret.pem"
+    outside_secret.write_text("-----BEGIN PRIVATE KEY-----\nnot really\n")
+    (source / "checkpoint.bin").symlink_to(outside_secret)
+    (source / "real.txt").write_text("john@example.com\n")
+
+    scan_result = scan_directory(str(source), StubDetector())
+    output = tmp_path / "out"
+    redact_directory(scan_result, str(output))
+
+    assert not (output / "checkpoint.bin").exists()
+    assert (output / "real.txt").exists()
+
+
+def test_redact_directory_refuses_a_symlinked_root(tmp_path):
+    real_dir = tmp_path / "real"
+    real_dir.mkdir()
+    (real_dir / "notes.txt").write_text("john@example.com\n")
+    link = tmp_path / "link"
+    link.symlink_to(real_dir)
+
+    scan_result = scan_directory(str(link), StubDetector())
+    output = tmp_path / "out"
+    result = redact_directory(scan_result, str(output))
+
+    assert result.files_written == []
+
+
+def test_redact_directory_rejects_an_output_path_that_is_an_existing_file(tmp_path):
+    """Regression test: --output pointing at an existing regular file
+    previously crashed with an uncaught NotADirectoryError from
+    os.listdir() instead of the same clean FileExistsError every other
+    "can't write here" case raises.
+    """
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "notes.txt").write_text("hello\n")
+    output_as_file = tmp_path / "output-is-a-file"
+    output_as_file.write_text("i am a file, not a directory\n")
+
+    scan_result = scan_directory(str(source), StubDetector())
+
+    with pytest.raises(FileExistsError):
+        redact_directory(scan_result, str(output_as_file))
+
+
+def test_redact_directory_csv_with_duplicate_headers_does_not_lose_data(tmp_path):
+    """Regression test: `csv.DictReader`/`DictWriter` collapse duplicate
+    column names into one dict key, so a CSV with header `email,note,email`
+    previously lost the first `email` column's value entirely (never
+    scanned) and duplicated the second column's value into both slots on
+    write-back.
+    """
+    source = tmp_path / "source"
+    source.mkdir()
+    (source / "data.csv").write_text(
+        "email,note,email\njohn@example.com,hi,552-000-1111 not an email\n"
+    )
+
+    scan_result = scan_directory(str(source), StubDetector())
+    output = tmp_path / "out"
+    redact_directory(scan_result, str(output), strategy=RedactionStrategy.REMOVE)
+
+    rows = list(csv.reader((output / "data.csv").read_text().splitlines()))
+    assert rows[0] == ["email", "note", "email"]
+    # First "email" column had a real match and is redacted; the second
+    # "email" column's distinct value must survive unchanged, not be
+    # overwritten with the first column's (redacted) value or vice versa.
+    assert "john@example.com" not in rows[1][0]
+    assert rows[1][2] == "552-000-1111 not an email"
 
 
 def test_redact_directory_copies_unreadable_formats_through_unchanged(tmp_path):
