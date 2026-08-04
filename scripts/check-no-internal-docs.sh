@@ -48,7 +48,19 @@ while read -r local_ref local_sha remote_ref remote_sha; do
   [ -n "$files" ] && forbidden_files="$forbidden_files
 $files"
 
-  matches=$(git diff "$range" -- . ':!scripts/check-no-internal-docs.sh' ':!.github/workflows/no-internal-docs.yml' | grep -inE "$PATTERN" || true)
+  # Only lines actually being *added* by this push should ever block it --
+  # `git diff` shows both sides of a change, so a commit that *removes* a
+  # previous leak (exactly what a fix-the-leak commit does) still contains
+  # the old, bad text on its "-" line. Without filtering to "+" lines
+  # first, that removal line itself would trip the pattern and block the
+  # very commit that fixes the problem. `grep -E '^\+[^+]'` matches an
+  # added-content line while excluding the "+++ b/file" diff header
+  # (which starts with two plus signs, not one).
+  matches=$(
+    git diff "$range" -- . ':!scripts/check-no-internal-docs.sh' ':!.github/workflows/no-internal-docs.yml' \
+      | grep -E '^\+[^+]' \
+      | grep -inE "$PATTERN" || true
+  )
   [ -n "$matches" ] && hits="$hits
 $matches"
 done
