@@ -3,10 +3,11 @@
 **Scan a dataset or model directory for PII and secrets with [Presidio](https://github.com/data-privacy-stack/presidio), redact what you find, and generate a public-release bundle, a Hugging Face dataset/model card plus an EU AI Act Art. 53(1)(d) training-data summary, in one command.**
 
 [![CI](https://github.com/RudrenduPaul/ReleaseGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/RudrenduPaul/ReleaseGuard/actions/workflows/ci.yml)
+[![PyPI](https://img.shields.io/pypi/v/releaseguard-cli.svg)](https://pypi.org/project/releaseguard-cli/)
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-<!-- TODO: record a real terminal-recording demo GIF (vhs) once the CLI is on PyPI; until then the Quickstart section below is a real, unedited terminal transcript, not a mockup. -->
+<!-- TODO: record a real terminal-recording demo GIF (vhs) once the npm package is also live; until then the Quickstart section below is a real, unedited terminal transcript, not a mockup. -->
 
 ReleaseGuard is **not** a PII detector. It's the glue between "I have a dataset I want to publish" and "I have a sanitized bundle with the paperwork already drafted." Detection is entirely [Presidio](https://github.com/data-privacy-stack/presidio)'s, an actively maintained open-source project with 10,000+ GitHub stars. ReleaseGuard chains Presidio's scan straight into redaction and into the two documents almost every public dataset/model release actually needs, instead of you writing a script to do it yourself.
 
