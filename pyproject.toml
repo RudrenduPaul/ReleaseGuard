@@ -47,8 +47,8 @@ dependencies = [
 [project.optional-dependencies]
 parquet = ["pyarrow>=15.0"]
 # The mcp package requires Python >=3.10, matching this project's own
-# floor, so it never conflicts here the way it does for repos with a
-# lower requires-python (see WorkloadTruth's CLAUDE.md for that case).
+# floor, so it never conflicts here the way it can for a project with a
+# lower requires-python floor.
 # Pinned to >=2.0: mcp_server.py uses `mcp.server.MCPServer`, which
 # replaced `mcp.server.fastmcp.FastMCP` in the 2.0.0 release -- verified
 # directly against the installed package, not assumed from older docs.
