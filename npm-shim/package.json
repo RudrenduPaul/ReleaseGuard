@@ -1,6 +1,6 @@
 {
   "name": "releaseguard-cli",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Scan a dataset/model directory for PII and secrets with Presidio, redact what you find, and package a public-release bundle (HF dataset/model card + EU AI Act Art. 53(1)(d) summary) in one command.",
   "keywords": [
     "pii-detection",

@@ -4,7 +4,7 @@ build-backend = "hatchling.build"
 
 [project]
 name = "releaseguard-cli"
-version = "0.1.0"
+version = "0.1.1"
 description = "Scan a dataset or model directory for PII and secrets, redact what you find, and package a public-release bundle with a Hugging Face dataset/model card and an EU AI Act Art. 53(1)(d) training-data summary -- generated from the scan, not hand-written."
 readme = "README.md"
 license = "Apache-2.0"

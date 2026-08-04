@@ -8,7 +8,9 @@
 [![License: Apache 2.0](https://img.shields.io/badge/License-Apache%202.0-blue.svg)](LICENSE)
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
-<!-- TODO: record a real terminal-recording demo GIF (vhs); until then the Quickstart section below is a real, unedited terminal transcript, not a mockup. -->
+<p align="center">
+  <img src="docs/demo.gif" alt="Terminal recording of releaseguard scan finding PII in a sample CSV, then releaseguard package writing a redacted copy plus a Hugging Face dataset card and an EU AI Act training-data summary" width="800">
+</p>
 
 ReleaseGuard is **not** a PII detector. It's the glue between "I have a dataset I want to publish" and "I have a sanitized bundle with the paperwork already drafted." Detection is entirely [Presidio](https://github.com/data-privacy-stack/presidio)'s, an actively maintained open-source project with 10,000+ GitHub stars. ReleaseGuard chains Presidio's scan straight into redaction and into the two documents almost every public dataset/model release actually needs, instead of you writing a script to do it yourself.
 
@@ -57,16 +59,15 @@ This is a real, unedited run against a two-row sample CSV, not a mockup:
 ```
 $ releaseguard scan dataset --score-threshold 0.4
 Scanned 1 file(s) under dataset
-Total findings: 8
+Total findings: 7
 
 entity type                 count
 URL                         3
 PERSON                      2
 EMAIL_ADDRESS               2
-ORGANIZATION                1
 ```
 
-That `URL: 3` line is a real Presidio quirk worth calling out rather than hiding: its regex-based URL recognizer also fires on the domain portion of an email address (`example.com` inside `alice.rivera@example.com`), so email-heavy text double-counts as both `EMAIL_ADDRESS` and `URL`. This is Presidio's own recognizer behavior, unmodified. Filter it out with `--entities` if you only care about email addresses:
+That `URL: 3` line is a real Presidio quirk worth calling out rather than hiding: its regex-based URL recognizer also fires on the domain portion of an email address (`example.com` inside `alice.rivera@example.com`), so email-heavy text double-counts as both `EMAIL_ADDRESS` and `URL`. This is Presidio's own recognizer behavior, unmodified, and it's worth noting entity counts can shift slightly between Presidio/spaCy versions since detection is NLP-based, not a fixed lookup table (this run used `presidio-analyzer` 2.2.364 with `en_core_web_sm` 3.8.0). Filter it out with `--entities` if you only care about email addresses:
 
 ```bash
 releaseguard scan dataset --entities EMAIL_ADDRESS,PERSON,PHONE_NUMBER
@@ -99,7 +100,6 @@ A Presidio-backed scan (detector: `presidio`) covered 1 file(s) under `dataset`.
 | PII/secret category detected | Occurrences |
 | --- | --- |
 | `EMAIL_ADDRESS` | 2 |
-| `ORGANIZATION` | 1 |
 | `PERSON` | 2 |
 | `URL` | 3 |
 ```
@@ -210,6 +210,9 @@ No. It cannot, since it calls Presidio's own `AnalyzerEngine` for every detectio
 **Why does `scan` need a spaCy model download?**
 Presidio's `AnalyzerEngine` requires a spaCy language model for context-aware detection (recognizing that "John Smith" is a name from surrounding text, not just a capitalized word). spaCy models ship as their own installable packages, not as a `pip` dependency, so `python -m spacy download en_core_web_sm` is a required one-time step, the same as it is for anyone using Presidio directly.
 
+**Does ReleaseGuard work on Windows, macOS, and Linux?**
+It's pure Python with no OS-specific code path, and the npm launcher shim picks `where` or `which` per platform to locate the installed CLI (`npm-shim/bin/releaseguard-cli.js`). CI currently runs on `ubuntu-latest` only, across Python 3.10 and 3.12, so macOS and Windows aren't yet covered by an automated test matrix. Treat them as expected to work, not CI-verified, until that matrix expands.
+
 **Is the EU AI Act Art. 53(1)(d) summary legally sufficient on its own?**
 No. It is a structurally correct starting draft populated with real scan data where ReleaseGuard can verify it (the PII/secrets section) and an explicit placeholder everywhere it can't (data sources, licensing, copyright status). A human, ideally with legal review, has to fill in the placeholders before publishing it as a compliance artifact.
 
@@ -218,6 +221,9 @@ The Art. 53(1)(d) summary specifically targets general-purpose AI model provider
 
 **Why two registries?**
 ReleaseGuard's implementation is Python, since Presidio itself is Python (`presidio-analyzer`/`presidio-anonymizer`); wrapping it in another language would mean re-shelling out or reimplementing bindings. The npm package (`releaseguard-cli`) is a thin launcher, not a reimplementation. It locates and execs the real `releaseguard` binary installed from PyPI, so `npx releaseguard-cli` works for npm-first agent tooling without duplicating Presidio's detection logic in two languages.
+
+**What license is ReleaseGuard under, and can I use it commercially?**
+Apache 2.0, the same license Presidio itself uses. It permits commercial use, modification, and redistribution, including inside a proprietary product, subject to the standard Apache 2.0 terms: keep the license and copyright notice, and state any changes made to the source. See [LICENSE](LICENSE) for the full text.
 
 **Does anyone actually need this, or is it "glue code nobody asked for"?**
 Honestly stated: no organic demand signal (an HN/Reddit thread describing this exact workflow as a lived pain point) had surfaced as of this project's initial research. The independently verifiable fact is narrower and more defensible: no existing open-source tool chains a Presidio scan directly into an Art. 53(1)(d) template or a combined HF card, in one command, from one scan. Whether that gap turns into real usage is an open, falsifiable question this project tracks rather than assumes the answer to.
