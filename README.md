@@ -113,6 +113,11 @@ Usage: releaseguard [OPTIONS] COMMAND [ARGS]...
 
   Scan, redact, and package a dataset/model directory for public release.
 
+  ReleaseGuard is a packaging layer on top of Presidio (originally a Microsoft
+  project, now maintained by data-privacy-stack) -- it does not detect PII
+  independently of Presidio. See the README's "What ReleaseGuard is not"
+  section.
+
 Options:
   --version  Show the version and exit.
   --help     Show this message and exit.
