@@ -16,5 +16,5 @@ Initial release.
 - `releaseguard mcp` -- MCP server (stdio) exposing `scan_directory_tool`,
   `redact_directory_tool`, `package_release_tool`.
 - `.well-known/agent.json` for A2A-style agent discovery.
-- Published as `releaseguard-cli` on PyPI (Python core) and npm (thin
-  launcher shim).
+- Published as `releaseguard-cli` on PyPI (Python core). The npm launcher
+  shim is built and ready but not yet published.
