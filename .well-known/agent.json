@@ -1,0 +1,35 @@
+{
+  "name": "releaseguard",
+  "description": "Scans a dataset/model directory for PII and secrets with Presidio, redacts what it finds, and packages a public-release bundle: a Hugging Face dataset/model card and an EU AI Act Art. 53(1)(d) training-data-summary template, generated from the scan results.",
+  "version": "0.1.0",
+  "homepage": "https://github.com/RudrenduPaul/ReleaseGuard",
+  "license": "Apache-2.0",
+  "interfaces": [
+    {
+      "type": "cli",
+      "command": "releaseguard",
+      "subcommands": ["scan", "redact", "package", "mcp"],
+      "json_output_flag": "--json"
+    },
+    {
+      "type": "mcp",
+      "transport": "stdio",
+      "start_command": "releaseguard mcp",
+      "tools": ["scan_directory_tool", "redact_directory_tool", "package_release_tool"]
+    }
+  ],
+  "packages": {
+    "pypi": "releaseguard-cli",
+    "npm": "releaseguard-cli"
+  },
+  "capabilities": [
+    "pii-secret-scanning",
+    "pii-redaction",
+    "huggingface-dataset-card-generation",
+    "huggingface-model-card-generation",
+    "eu-ai-act-art-53-1-d-summary-generation"
+  ],
+  "dependencies": {
+    "detection_engine": "Presidio (https://github.com/data-privacy-stack/presidio) -- ReleaseGuard is a packaging layer on top of Presidio, not an independent detector"
+  }
+}

@@ -1,0 +1,35 @@
+{
+  "name": "releaseguard-cli",
+  "version": "0.1.0",
+  "description": "Scan a dataset/model directory for PII and secrets with Presidio, redact what you find, and package a public-release bundle (HF dataset/model card + EU AI Act Art. 53(1)(d) summary) in one command.",
+  "keywords": [
+    "pii-detection",
+    "presidio",
+    "data-redaction",
+    "dataset-card",
+    "model-card",
+    "eu-ai-act",
+    "ai-compliance",
+    "responsible-ai",
+    "agent-tools",
+    "mcp"
+  ],
+  "homepage": "https://github.com/RudrenduPaul/ReleaseGuard",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/RudrenduPaul/ReleaseGuard.git"
+  },
+  "bugs": {
+    "url": "https://github.com/RudrenduPaul/ReleaseGuard/issues"
+  },
+  "license": "Apache-2.0",
+  "author": "Rudrendu Paul",
+  "contributors": ["Sourav Nandy"],
+  "bin": {
+    "releaseguard-cli": "bin/releaseguard-cli.js"
+  },
+  "files": ["bin"],
+  "engines": {
+    "node": ">=18"
+  }
+}
