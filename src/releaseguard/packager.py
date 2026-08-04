@@ -7,11 +7,11 @@ scan/redaction results, never from separately hand-typed claims.
 
 The compliance-template surface is deliberately a small, explicit registry
 (`COMPLIANCE_TEMPLATES` below) rather than a hardcoded single call into
-`eu_ai_act.generate_eu_ai_act_summary`, per this repo's eng-review
-extensibility decision: `eu_ai_act.py` is the only real target in v0.1, but
-the Moat Roadmap names a second jurisdiction as the next likely addition
-(gated on real user demand, not built speculatively) -- a registry entry is
-a scoped addition when that happens, not a rewrite of this function.
+`eu_ai_act.generate_eu_ai_act_summary`: `eu_ai_act.py` is the only real
+target in v0.1, but a second jurisdiction is a plausible future addition,
+gated on real user demand rather than built speculatively (see
+CONTRIBUTING.md). A registry entry is a scoped addition when that happens,
+not a rewrite of this function.
 """
 
 from __future__ import annotations
