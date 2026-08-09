@@ -73,6 +73,8 @@ That `URL: 3` line is a real Presidio quirk worth calling out rather than hiding
 releaseguard scan dataset --entities EMAIL_ADDRESS,PERSON,PHONE_NUMBER
 ```
 
+![ReleaseGuard scan filtered to specific entity types with --entities and --json for structured output](docs/demo-entities.gif)
+
 Redact, then package a release bundle in one command:
 
 ```bash
@@ -107,6 +109,8 @@ A Presidio-backed scan (detector: `presidio`) covered 1 file(s) under `dataset`.
 `--json` on every command switches to machine-readable output for scripts and agents.
 
 ## CLI reference
+
+![ReleaseGuard --help output listing the scan, redact, package, and mcp subcommands](docs/demo-help.gif)
 
 ```
 $ releaseguard --help
