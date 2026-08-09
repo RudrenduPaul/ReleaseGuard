@@ -161,7 +161,7 @@ bundle = build_release_bundle(
 print(bundle.eu_ai_act_summary_path)
 ```
 
-`PIIDetector` (`releaseguard.detectors.base`) and `FileReader` (`releaseguard.readers.base`) are the two extension points. Presidio is the only detector shipped in v0.1; CSV, JSON/JSONL, and plain text are the three readers shipped in v0.1. Both are registries, not hardcoded calls, specifically so a new format or a second detection backend is a scoped addition later. See [CONTRIBUTING.md](CONTRIBUTING.md).
+`PIIDetector` (`releaseguard.detectors.base`) and `FileReader` (`releaseguard.readers.base`) are the two extension points. Presidio is currently the only detector shipped; CSV, JSON/JSONL, and plain text are currently the three readers shipped. Both are registries, not hardcoded calls, specifically so a new format or a second detection backend is a scoped addition later. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Agent-native (MCP + A2A)
 
