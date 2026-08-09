@@ -1,7 +1,5 @@
 # ReleaseGuard
 
-**Scan a dataset or model directory for PII and secrets with [Presidio](https://github.com/data-privacy-stack/presidio), redact what you find, and generate a public-release bundle, a Hugging Face dataset/model card plus an EU AI Act Art. 53(1)(d) training-data summary, in one command.**
-
 [![CI](https://github.com/RudrenduPaul/ReleaseGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/RudrenduPaul/ReleaseGuard/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/releaseguard-cli.svg)](https://pypi.org/project/releaseguard-cli/)
 [![npm](https://img.shields.io/npm/v/releaseguard-cli.svg)](https://www.npmjs.com/package/releaseguard-cli)
@@ -9,31 +7,21 @@
 [![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-blue)](pyproject.toml)
 
 <p align="center">
+  <a href="#install">Install</a> •
+  <a href="#quickstart">Quickstart</a> •
+  <a href="#cli-reference">CLI reference</a> •
+  <a href="#library-api">Library API</a> •
+  <a href="#comparison">Comparison</a> •
+  <a href="#faq">FAQ</a>
+</p>
+
+**Scan a dataset or model directory for PII and secrets with [Presidio](https://github.com/data-privacy-stack/presidio), redact what you find, and generate a public-release bundle, a Hugging Face dataset/model card plus an EU AI Act Art. 53(1)(d) training-data summary, in one command.**
+
+<p align="center">
   <img src="docs/demo.gif" alt="Terminal recording of releaseguard scan finding PII in a sample CSV, then releaseguard package writing a redacted copy plus a Hugging Face dataset card and an EU AI Act training-data summary" width="800">
 </p>
 
 ReleaseGuard is **not** a PII detector. It's the glue between "I have a dataset I want to publish" and "I have a sanitized bundle with the paperwork already drafted." Detection is entirely [Presidio](https://github.com/data-privacy-stack/presidio)'s, an actively maintained open-source project with 10,000+ GitHub stars. ReleaseGuard chains Presidio's scan straight into redaction and into the two documents almost every public dataset/model release actually needs, instead of you writing a script to do it yourself.
-
-## Table of contents
-
-- [Quick summary](#quick-summary)
-- [Install](#install)
-- [Quickstart](#quickstart)
-- [CLI reference](#cli-reference)
-- [Library API](#library-api)
-- [Agent-native (MCP + A2A)](#agent-native-mcp--a2a)
-- [Comparison](#comparison)
-- [What is ReleaseGuard, and why does it exist](#what-is-releaseguard-and-why-does-it-exist)
-- [What ReleaseGuard is not](#what-releaseguard-is-not)
-- [FAQ](#faq)
-- [Contributing](#contributing)
-
-## Quick summary
-
-- **Install:** `pip install releaseguard-cli` then `python -m spacy download en_core_web_sm` (Presidio's NLP model, one-time, ~13 MB)
-- **Use it for:** turning a Presidio scan into a redacted copy plus a dataset/model card and an EU AI Act Art. 53(1)(d) training-data summary, from one command instead of three separate tools and a hand-written template
-- **What it's not:** a PII detector of its own, or a claim of "total transparency"/full training-data disclosure compliance. See [What ReleaseGuard is not](#what-releaseguard-is-not)
-- **Runs entirely local.** No dataset content, scan results, or redacted output is ever sent to a remote service.
 
 ## Install
 
@@ -107,6 +95,12 @@ A Presidio-backed scan (detector: `presidio`) covered 1 file(s) under `dataset`.
 ```
 
 `--json` on every command switches to machine-readable output for scripts and agents.
+
+## Quick summary
+
+- **Use it for:** turning a Presidio scan into a redacted copy plus a dataset/model card and an EU AI Act Art. 53(1)(d) training-data summary, from one command instead of three separate tools and a hand-written template
+- **What it's not:** a PII detector of its own, or a claim of "total transparency"/full training-data disclosure compliance. See [What ReleaseGuard is not](#what-releaseguard-is-not)
+- **Runs entirely local.** No dataset content, scan results, or redacted output is ever sent to a remote service.
 
 ## CLI reference
 
