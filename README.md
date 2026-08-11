@@ -1,5 +1,8 @@
 # ReleaseGuard
 
+<!-- mcp-name: io.github.RudrenduPaul/releaseguard -->
+<!-- Ownership-proof string for registry.modelcontextprotocol.io publishing. Do not remove. -->
+
 [![CI](https://github.com/RudrenduPaul/ReleaseGuard/actions/workflows/ci.yml/badge.svg)](https://github.com/RudrenduPaul/ReleaseGuard/actions/workflows/ci.yml)
 [![PyPI](https://img.shields.io/pypi/v/releaseguard-cli.svg)](https://pypi.org/project/releaseguard-cli/)
 [![npm](https://img.shields.io/npm/v/releaseguard-cli.svg)](https://www.npmjs.com/package/releaseguard-cli)
@@ -161,14 +164,66 @@ print(bundle.eu_ai_act_summary_path)
 
 `PIIDetector` (`releaseguard.detectors.base`) and `FileReader` (`releaseguard.readers.base`) are the two extension points. Presidio is currently the only detector shipped; CSV, JSON/JSONL, and plain text are currently the three readers shipped. Both are registries, not hardcoded calls, specifically so a new format or a second detection backend is a scoped addition later. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
-## Agent-native (MCP + A2A)
+## MCP Server
+
+ReleaseGuard ships a [Model Context Protocol](https://modelcontextprotocol.io) server so an AI
+agent (Claude, Cursor, or any MCP-compatible client) can scan, redact, and package a dataset or
+model directory directly, without a human invoking the CLI by hand.
+
+Install the extra:
 
 ```bash
 pip install "releaseguard-cli[mcp]"
+```
+
+Start it directly with the `mcp` subcommand:
+
+```bash
 releaseguard mcp
 ```
 
-Exposes three tools over stdio MCP: `scan_directory_tool`, `redact_directory_tool`, `package_release_tool`, each returning the same JSON shape as the matching CLI `--json` output. A `.well-known/agent.json` manifest is shipped at the repo root for A2A-style discovery, listing both the CLI and MCP interfaces and the packages that provide them.
+Add it to your MCP client's config (for Claude Desktop, `claude_desktop_config.json`). The server
+is started via a subcommand of the published `releaseguard` console script, not a separate
+console script of its own:
+
+```json
+{
+  "mcpServers": {
+    "releaseguard": {
+      "command": "uvx",
+      "args": ["--from", "releaseguard-cli", "releaseguard", "mcp"]
+    }
+  }
+}
+```
+
+Transport is stdio, so there is nothing to host: the MCP client spawns the server as a local
+subprocess. Source: [`src/releaseguard/mcp_server.py`](src/releaseguard/mcp_server.py).
+
+The server exposes three tools, each returning the same JSON shape as the matching CLI `--json`
+output:
+
+| Tool | Purpose |
+| --- | --- |
+| `scan_directory_tool(path, spacy_model=None, score_threshold=0.35)` | Scan a directory for PII and secrets with Presidio. |
+| `redact_directory_tool(path, output, strategy="mask", overwrite=False)` | Scan, then write a redacted copy to `output`. Never mutates `path`. `strategy` is `"mask"`, `"hash"`, or `"remove"`. |
+| `package_release_tool(path, output, kind="dataset", redact_first=True, strategy="mask")` | Scan, optionally redact, and write a release bundle (dataset/model card plus the EU AI Act Art. 53(1)(d) summary) to `output`. |
+
+A real example call:
+
+```
+scan_directory_tool(path="./dataset", score_threshold=0.4)
+-> {"files_scanned": 1, "root_path": "./dataset", "findings": [...], "entity_counts": {"URL": 3, "PERSON": 2, "EMAIL_ADDRESS": 2}}
+```
+
+Every tool checks that `path` exists before doing anything else and returns a structured error,
+`{"error": "Path '<path>' does not exist.", "error_type": "PathNotFound"}`, instead of a silent,
+misleading "0 files scanned" success result. Earlier versions of this server skipped that check
+and let a bad path slip straight into `scan_directory`, which returned a false success instead
+of an error; every tool handler is also now wrapped so an unexpected exception comes back as
+`{"error": ..., "error_type": ...}` rather than crashing the server. A `.well-known/agent.json`
+manifest is shipped at the repo root for A2A-style discovery, listing both the CLI and MCP
+interfaces and the packages that provide them.
 
 ## Comparison
 

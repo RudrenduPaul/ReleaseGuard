@@ -15,11 +15,30 @@ version renames this again, this is the one file that needs to change.
 
 from __future__ import annotations
 
+import os
 from typing import Any
 
 from mcp.server import MCPServer
 
 from releaseguard.types import RedactionStrategy
+
+
+def _path_error(path: str) -> dict[str, Any] | None:
+    """Mirror the CLI's `click.Path(exists=True)` check.
+
+    The CLI rejects a nonexistent PATH before ever calling into
+    `scanner.scan_directory` (exit code 2, "Path does not exist"). The
+    internal scan/redact/package functions this MCP server calls directly
+    do not perform that check themselves -- a nonexistent directory just
+    makes `os.walk` yield nothing, so calling them straight from a tool
+    handler silently returns a misleading "0 files scanned, 0 findings"
+    success result instead of an error, for the same bad input the CLI
+    would refuse outright. Every tool below calls this first so an agent
+    never mistakes "path doesn't exist" for "path is clean."
+    """
+    if not os.path.exists(path):
+        return {"error": f"Path '{path}' does not exist.", "error_type": "PathNotFound"}
+    return None
 
 
 def build_app() -> MCPServer:
@@ -37,13 +56,18 @@ def build_app() -> MCPServer:
         Detection is entirely Presidio's -- this tool does not add its own
         detection logic or accuracy claims.
         """
-        from releaseguard.detectors import get_detector
-        from releaseguard.scanner import scan_directory as _scan_directory
+        if (err := _path_error(path)) is not None:
+            return err
+        try:
+            from releaseguard.detectors import get_detector
+            from releaseguard.scanner import scan_directory as _scan_directory
 
-        detector = get_detector(
-            "presidio", spacy_model=spacy_model, score_threshold=score_threshold
-        )
-        return _scan_directory(path, detector).to_dict()
+            detector = get_detector(
+                "presidio", spacy_model=spacy_model, score_threshold=score_threshold
+            )
+            return _scan_directory(path, detector).to_dict()
+        except Exception as exc:  # never let a tool call crash the server
+            return {"error": str(exc), "error_type": type(exc).__name__}
 
     @app.tool()
     def redact_directory_tool(
@@ -56,16 +80,21 @@ def build_app() -> MCPServer:
 
         `strategy` is one of "mask", "hash", "remove".
         """
-        from releaseguard.detectors import get_detector
-        from releaseguard.redactor import redact_directory as _redact_directory
-        from releaseguard.scanner import scan_directory as _scan_directory
+        if (err := _path_error(path)) is not None:
+            return err
+        try:
+            from releaseguard.detectors import get_detector
+            from releaseguard.redactor import redact_directory as _redact_directory
+            from releaseguard.scanner import scan_directory as _scan_directory
 
-        detector = get_detector("presidio")
-        scan_result = _scan_directory(path, detector)
-        result = _redact_directory(
-            scan_result, output, strategy=RedactionStrategy(strategy), overwrite=overwrite
-        )
-        return result.to_dict()
+            detector = get_detector("presidio")
+            scan_result = _scan_directory(path, detector)
+            result = _redact_directory(
+                scan_result, output, strategy=RedactionStrategy(strategy), overwrite=overwrite
+            )
+            return result.to_dict()
+        except Exception as exc:  # e.g. bad `strategy`, FileExistsError on --output
+            return {"error": str(exc), "error_type": type(exc).__name__}
 
     @app.tool()
     def package_release_tool(
@@ -81,25 +110,33 @@ def build_app() -> MCPServer:
         Art. 53(1)(d) training-data-summary template, both generated from
         the scan results. `kind` is "dataset", "model", or "both".
         """
-        from releaseguard.detectors import get_detector
-        from releaseguard.packager import build_release_bundle
-        from releaseguard.redactor import redact_directory as _redact_directory
-        from releaseguard.scanner import scan_directory as _scan_directory
+        if (err := _path_error(path)) is not None:
+            return err
+        try:
+            from releaseguard.detectors import get_detector
+            from releaseguard.packager import build_release_bundle
+            from releaseguard.redactor import redact_directory as _redact_directory
+            from releaseguard.scanner import scan_directory as _scan_directory
 
-        detector = get_detector("presidio")
-        scan_result = _scan_directory(path, detector)
+            detector = get_detector("presidio")
+            scan_result = _scan_directory(path, detector)
 
-        redaction_result = None
-        if redact_first:
-            redacted_dir = f"{output.rstrip('/')}-redacted-source"
-            redaction_result = _redact_directory(
-                scan_result, redacted_dir, strategy=RedactionStrategy(strategy), overwrite=True
+            redaction_result = None
+            if redact_first:
+                redacted_dir = f"{output.rstrip('/')}-redacted-source"
+                redaction_result = _redact_directory(
+                    scan_result,
+                    redacted_dir,
+                    strategy=RedactionStrategy(strategy),
+                    overwrite=True,
+                )
+
+            result = build_release_bundle(
+                scan_result, output, redaction_result=redaction_result, source_kind=kind
             )
-
-        result = build_release_bundle(
-            scan_result, output, redaction_result=redaction_result, source_kind=kind
-        )
-        return result.to_dict()
+            return result.to_dict()
+        except Exception as exc:
+            return {"error": str(exc), "error_type": type(exc).__name__}
 
     return app
 
