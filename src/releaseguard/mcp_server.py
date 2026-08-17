@@ -50,7 +50,8 @@ def build_app() -> MCPServer:
         spacy_model: str | None = None,
         score_threshold: float = 0.35,
     ) -> dict[str, Any]:
-        """Recursively scan a local dataset or model directory for PII and secrets before you publish it.
+        """Recursively scan a local dataset or model directory for PII and
+        secrets before you publish it.
 
         Call this before releasing, uploading, or sharing a dataset/model
         directory whenever you need to know what personal data it contains --
@@ -110,7 +111,8 @@ def build_app() -> MCPServer:
         strategy: str = "mask",
         overwrite: bool = False,
     ) -> dict[str, Any]:
-        """Scan a directory for PII/secrets with Presidio, then write a redacted copy to a new location.
+        """Scan a directory for PII/secrets with Presidio, then write a
+        redacted copy to a new location.
 
         Call this once you already know (or expect) a directory contains
         PII and want a sanitized copy you can hand off or publish, without
@@ -172,7 +174,8 @@ def build_app() -> MCPServer:
         redact_first: bool = True,
         strategy: str = "mask",
     ) -> dict[str, Any]:
-        """Scan a dataset/model directory, redact it, and generate the paperwork needed to publish it, in one call.
+        """Scan a dataset/model directory, redact it, and generate the
+        paperwork needed to publish it, in one call.
 
         This is the end-to-end tool: use it when the goal is "make this
         directory publishable" rather than just inspecting or redacting it.
