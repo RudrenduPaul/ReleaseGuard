@@ -5,6 +5,11 @@ All notable changes to this project are documented in this file.
 ## [Unreleased]
 
 - Bump `cryptography` (indirect dependency) from 48.0.1 to 50.0.0 (#2).
+- Dependencies and `uv.lock` refreshed; lockfile-only, no change to the
+  shipped package, its version, or its support floors.
+- npm publishing of the `releaseguard-cli` launcher moves to npm Trusted
+  Publishing (GitHub Actions OIDC, no long-lived token). The launcher itself is
+  unchanged since 0.1.1; the next npm release will be 0.1.3, matching PyPI.
 
 ## [0.1.3] - 2026-08-11
 
