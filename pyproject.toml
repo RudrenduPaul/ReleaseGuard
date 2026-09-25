@@ -100,3 +100,8 @@ omit = [
     "*/releaseguard/cli.py",
     "*/releaseguard/mcp_server.py",
 ]
+
+[tool.uv]
+# Keep the locked cryptography at a release that includes the published
+# security fixes; newer presidio-anonymizer releases cap it below that.
+constraint-dependencies = ["cryptography>=50.0.1"]
